@@ -1,5 +1,5 @@
 // ==========================================================================
-// IMPORTAÇÃO E CONFIGURAÇÃO DO FIREBASE (NUVEM - PLANO GRATUITO)
+// IMPORTAÇÃO E CONFIGURAÇÃO DO FIREBASE (NUVEM)
 // ==========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
@@ -30,7 +30,7 @@ const vehiclesCollection = collection(db, "veiculos");
 // ==========================================================================
 // CONFIGURAÇÕES DE AUTENTICAÇÃO
 // ==========================================================================
-const ADMIN_PASSWORD = "real123";
+const ADMIN_PASSWORD = "real123"; // Palavra-passe de administrador
 let isAdminLoggedIn = false;
 
 // ==========================================================================
@@ -56,6 +56,7 @@ const bodyFilter = document.getElementById('body-filter');
 // SINCRONIZAÇÃO EM TEMPO REAL (FIRESTORE)
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Escuta em tempo real: qualquer alteração no banco atualiza o site instantaneamente
     onSnapshot(vehiclesCollection, (snapshot) => {
         cars = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    // Gestão de Sessão do Admin
     adminToggleBtn.addEventListener('click', () => {
         if (!isAdminLoggedIn) {
             const passwordInput = prompt("Digite a palavra-passe de administrador:");
@@ -104,7 +106,7 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Compressão ultra-leve para permitir múltiplas fotos no limite de 1 MB
+// Compressão leve para manter documentos dentro do limite do plano gratuito (~25KB/foto)
 function compressImage(file, maxWidth = 600, quality = 0.4) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -135,7 +137,6 @@ function compressImage(file, maxWidth = 600, quality = 0.4) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Exporta em JPEG otimizado (~25KB por foto)
                 resolve(canvas.toDataURL('image/jpeg', quality));
             };
             img.onerror = (err) => reject(err);
@@ -149,7 +150,7 @@ async function processSelectedImages(files) {
     return await Promise.all(promises);
 }
 
-// Submeter Formulário
+// Submeter Formulário (Guardar no Firebase)
 async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -176,6 +177,7 @@ async function handleFormSubmit(e) {
         }
 
         if (carId) {
+            // Atualizar veículo existente na nuvem
             const existingCar = cars.find(c => c.id === carId);
             const updatedData = {
                 title,
@@ -191,6 +193,7 @@ async function handleFormSubmit(e) {
             await updateDoc(vehicleRef, updatedData);
             alert('Veículo atualizado com sucesso na nuvem!');
         } else {
+            // Criar novo veículo na nuvem
             const newCarData = {
                 title,
                 brand,
@@ -203,13 +206,14 @@ async function handleFormSubmit(e) {
             };
 
             await addDoc(vehiclesCollection, newCarData);
-            alert('Novo veículo cadastrado com sucesso!');
+            alert('Novo veículo cadastrado na nuvem com sucesso!');
         }
 
         resetForm();
     } catch (error) {
         console.error("Erro ao guardar no Firebase:", error);
-        alert('Ocorreu um erro ao guardar no banco de dados da nuvem. Verifique a ligação ou as regras do Firebase.');
+        // Exibe o erro técnico exato retornado pelo Firebase para facilitar a depuração
+        alert(`ERRO DO FIREBASE:\n\nCódigo: ${error.code || 'Desconhecido'}\nMensagem: ${error.message || error}`);
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -305,7 +309,7 @@ function createCarCard(car) {
     return card;
 }
 
-// Funções Globais
+// Funções Globais (Para botões inline)
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
