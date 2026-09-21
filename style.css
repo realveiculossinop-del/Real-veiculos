@@ -1,0 +1,423 @@
+/* ==========================================================================
+   RESET E CONFIGURAÇÕES GERAIS
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #0f1115;
+    color: #ffffff;
+    min-height: 100vh;
+    padding-bottom: 40px;
+}
+
+/* ==========================================================================
+   CABEÇALHO / NAVBAR (COM SUPORTE À LOGO DA LOJA)
+   ========================================================================== */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background-color: #161920;
+    border-bottom: 1px solid #282c37;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+
+/* Ajuste de tamanho da Imagem da Logo Oficial */
+.logo-img {
+    height: 45px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* Estilo do Botão Admin */
+.btn-admin-toggle {
+    background: transparent;
+    border: 1px solid #e2b93b;
+    color: #e2b93b;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-admin-toggle:hover {
+    background-color: #e2b93b;
+    color: #0f1115;
+}
+
+/* ==========================================================================
+   CONTAINER PRINCIPAL
+   ========================================================================== */
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 16px;
+}
+
+/* ==========================================================================
+   PAINEL ADMINISTRATIVO (FORMULÁRIO)
+   ========================================================================== */
+.admin-section {
+    background-color: #1a1d26;
+    border: 1px solid #2d3240;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.admin-section.hidden {
+    display: none;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #2d3240;
+    padding-bottom: 12px;
+}
+
+.admin-header h2 {
+    font-size: 18px;
+    color: #ffffff;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: #a1a1aa;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.admin-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+    .admin-form .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    font-size: 13px;
+    color: #a1a1aa;
+    font-weight: 500;
+}
+
+.form-group input, 
+.form-group select {
+    background-color: #0f1115;
+    border: 1px solid #2d3240;
+    color: #ffffff;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+    border-color: #e2b93b;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-submit {
+    background-color: #e2b93b;
+    color: #0f1115;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    flex: 1;
+}
+
+.btn-cancel {
+    background-color: #3f3f46;
+    color: #ffffff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-cancel.hidden {
+    display: none;
+}
+
+/* ==========================================================================
+   BARRA DE PESQUISA E FILTROS
+   ========================================================================== */
+.section-title-container h2 {
+    font-size: 22px;
+    margin-bottom: 16px;
+    color: #ffffff;
+}
+
+.filter-section {
+    background-color: #161920;
+    border: 1px solid #232733;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background-color: #0f1115;
+    border: 1px solid #2d3240;
+    border-radius: 6px;
+    padding: 0 12px;
+}
+
+.search-box i {
+    color: #a1a1aa;
+    margin-right: 8px;
+}
+
+.search-box input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    padding: 12px 0;
+    outline: none;
+}
+
+.filters-container {
+    display: flex;
+    gap: 10px;
+}
+
+.filters-container select {
+    flex: 1;
+    background-color: #0f1115;
+    border: 1px solid #2d3240;
+    color: #ffffff;
+    padding: 10px;
+    border-radius: 6px;
+    outline: none;
+}
+
+/* ==========================================================================
+   GRELHA DE CARTÕES DOS VEÍCULOS
+   ========================================================================== */
+.car-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.car-card {
+    background-color: #161920;
+    border: 1px solid #232733;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-tag {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background-color: #e2b93b;
+    color: #0f1115;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 800;
+    z-index: 10;
+}
+
+/* ==========================================================================
+   CARROSSEL / CARRETEL DE FOTOS DO VEÍCULO
+   ========================================================================== */
+.car-carousel {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    background-color: #0f1115;
+}
+
+.carousel-slide {
+    display: none;
+    width: 100%;
+    height: 100%;
+}
+
+.carousel-slide.active {
+    display: block;
+}
+
+.carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    border: none;
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-btn.prev { left: 8px; }
+.carousel-btn.next { right: 8px; }
+
+.carousel-dots {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 5;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+}
+
+.dot.active {
+    background: #ffffff;
+    transform: scale(1.2);
+}
+
+/* ==========================================================================
+   INFORMAÇÕES E BOTÕES DO CARTÃO
+   ========================================================================== */
+.car-info {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.car-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.car-price {
+    font-size: 20px;
+    font-weight: 800;
+    color: #e2b93b;
+    margin-bottom: 12px;
+}
+
+.car-details {
+    display: flex;
+    justify-content: space-between;
+    color: #a1a1aa;
+    font-size: 13px;
+    border-top: 1px solid #232733;
+    padding-top: 12px;
+    margin-bottom: 16px;
+}
+
+.car-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.btn-whatsapp {
+    background-color: #10b981;
+    color: #ffffff;
+    text-decoration: none;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.admin-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.btn-edit {
+    background-color: #27272a;
+    color: #ffffff;
+    border: 1px solid #3f3f46;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-delete {
+    background-color: #7f1d1d;
+    color: #fca5a5;
+    border: 1px solid #991b1b;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}

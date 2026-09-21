@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Veículos | Catálogo Digital</title>
+
+    <!-- Font Awesome (Ícones) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Ficheiro de Estilos CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Cabeçalho / Navbar -->
+    <header class="navbar">
+        <div class="logo-container">
+            <img src="logo.png" alt="Real Veículos" class="logo-img">
+        </div>
+        <button id="admin-toggle-btn" class="btn-admin-toggle">
+            <i class="fas fa-lock"></i> Entrar como Admin
+        </button>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-container">
+
+        <!-- Secção do Painel Administrativo (Formulário) -->
+        <section id="admin-section" class="admin-section hidden">
+            <div class="admin-header">
+                <h2 id="form-title">Cadastrar Novo Veículo</h2>
+                <button id="close-admin-btn" class="btn-close">&times;</button>
+            </div>
+
+            <form id="car-form" class="admin-form">
+                <input type="hidden" id="car-id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="car-title-input">Nome / Modelo do Veículo</label>
+                        <input type="text" id="car-title-input" placeholder="Ex: Honda CR-V EXL 2.0 Flex" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="car-brand-input">Marca</label>
+                        <select id="car-brand-input" required>
+                            <option value="">Selecione a Marca</option>
+                            <option value="Chevrolet">Chevrolet</option>
+                            <option value="Toyota">Toyota</option>
+                            <option value="Honda">Honda</option>
+                            <option value="Ford">Ford</option>
+                            <option value="Volkswagen">Volkswagen</option>
+                            <option value="Fiat">Fiat</option>
+                            <option value="Hyundai">Hyundai</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="car-type-input">Tipo de Carroçaria</label>
+                        <select id="car-type-input" required>
+                            <option value="SUV">SUV</option>
+                            <option value="Sedan">Sedan</option>
+                            <option value="Hatch">Hatch</option>
+                            <option value="Picape">Picape</option>
+                            <option value="Esportivo">Esportivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="car-year-input">Ano / Modelo</label>
+                        <input type="text" id="car-year-input" placeholder="Ex: 2012 / 2012" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="car-km-input">Quilometragem</label>
+                        <input type="text" id="car-km-input" placeholder="Ex: 141.000 km" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="car-price-input">Preço (R$)</label>
+                        <input type="text" id="car-price-input" placeholder="Ex: R$ 65.900" required>
+                    </div>
+                </div>
+
+                <!-- Upload de Imagens -->
+                <div class="form-group">
+                    <label for="car-image-input">Fotos do Veículo (Selecione uma ou mais fotos)</label>
+                    <input type="file" id="car-image-input" accept="image/*" multiple>
+                    <small style="color: #a1a1aa; display: block; margin-top: 4px;">Pode escolher várias fotos de uma só vez na sua galeria.</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Salvar Veículo</button>
+                    <button type="button" id="cancel-edit-btn" class="btn-cancel hidden">Cancelar</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Título da Galeria -->
+        <div class="section-title-container">
+            <h2>Veículos em Destaque</h2>
+        </div>
+
+        <!-- Barra de Busca e Filtros -->
+        <section class="filter-section">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Pesquisar por modelo ou marca...">
+            </div>
+
+            <div class="filters-container">
+                <select id="brand-filter">
+                    <option value="all">Todas as Marcas</option>
+                    <option value="Chevrolet">Chevrolet</option>
+                    <option value="Toyota">Toyota</option>
+                    <option value="Honda">Honda</option>
+                    <option value="Ford">Ford</option>
+                    <option value="Volkswagen">Volkswagen</option>
+                    <option value="Fiat">Fiat</option>
+                    <option value="Hyundai">Hyundai</option>
+                </select>
+
+                <select id="body-filter">
+                    <option value="all">Todos os Tipos</option>
+                    <option value="SUV">SUV</option>
+                    <option value="Sedan">Sedan</option>
+                    <option value="Hatch">Hatch</option>
+                    <option value="Picape">Picape</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Grelha de Exibição dos Veículos -->
+        <section id="car-grid" class="car-grid">
+            <!-- Os cartões de carros serão inseridos dinamicamente via JS -->
+        </section>
+
+    </main>
+
+    <!-- Ficheiro de Script JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
