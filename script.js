@@ -290,7 +290,7 @@ function createCarCard(car) {
                 <span><i class="fas fa-tachometer-alt"></i> ${car.km}</span>
             </div>
             <div class="car-actions">
-                <a href="https://wa.me/5500000000000?text=${whatsappMessage}" target="_blank" class="btn-whatsapp">
+                <a href="https://wa.me/5566992555125?text=${whatsappMessage}" target="_blank" class="btn-whatsapp">
                     <i class="fab fa-whatsapp"></i> Tenho Interesse
                 </a>
                 ${adminButtonsHTML}
