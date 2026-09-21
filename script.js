@@ -12,7 +12,6 @@ import {
     onSnapshot 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Configurações do seu projeto Firebase Real Veículos
 const firebaseConfig = {
     apiKey: "AIzaSyB9qJkpKr3ch5BCL4xwQcvfwLpbX31w5tI",
     authDomain: "real-veiculos-7ddb9.firebaseapp.com",
@@ -22,25 +21,20 @@ const firebaseConfig = {
     appId: "1:106904646145:web:54bec9863b53538cbb0600"
 };
 
-// Inicialização do Firebase & Firestore
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const vehiclesCollection = collection(db, "veiculos");
 
-// ==========================================================================
-// CONFIGURAÇÕES DE AUTENTICAÇÃO
-// ==========================================================================
 const ADMIN_PASSWORD = "real123";
 let isAdminLoggedIn = false;
 
-// ==========================================================================
-// DADOS E VARIÁVEIS DE ESTADO
-// ==========================================================================
 let cars = [];
 let currentModalImages = [];
 let currentModalIndex = 0;
 
-// Elementos do DOM
+let touchStartX = 0;
+let touchEndX = 0;
+
 const carGrid = document.getElementById('car-grid');
 const adminSection = document.getElementById('admin-section');
 const adminToggleBtn = document.getElementById('admin-toggle-btn');
@@ -49,21 +43,16 @@ const carForm = document.getElementById('car-form');
 const formTitle = document.getElementById('form-title');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
 
-// Elementos de Filtro
 const searchInput = document.getElementById('search-input');
 const brandFilter = document.getElementById('brand-filter');
 const bodyFilter = document.getElementById('body-filter');
 
-// ==========================================================================
-// SINCRONIZAÇÃO EM TEMPO REAL (FIRESTORE)
-// ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     onSnapshot(vehiclesCollection, (snapshot) => {
         cars = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data()
         }));
-
         renderCars();
     }, (error) => {
         console.error("Erro ao sincronizar com o Firebase:", error);
@@ -106,8 +95,8 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Compressão otimizada com alta qualidade (1000px, 70% JPEG)
-function compressImage(file, maxWidth = 1000, quality = 0.7) {
+// Compressão de Alta Qualidade e Remoção de Metadados
+function compressImageHD(file, maxWidth = 1000, quality = 0.65) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -135,6 +124,9 @@ function compressImage(file, maxWidth = 1000, quality = 0.7) {
                 canvas.height = height;
 
                 const ctx = canvas.getContext('2d');
+                // Aplica suavização na reescalagem
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, width, height);
 
                 resolve(canvas.toDataURL('image/jpeg', quality));
@@ -146,7 +138,20 @@ function compressImage(file, maxWidth = 1000, quality = 0.7) {
 }
 
 async function processSelectedImages(files) {
-    const promises = Array.from(files).map(file => compressImage(file));
+    const total = files.length;
+    // Ajuste proporcional automático para manter o lote de fotos sempre < 900KB
+    let maxWidth = 1000;
+    let quality = 0.65;
+
+    if (total >= 8) {
+        maxWidth = 800;
+        quality = 0.45;
+    } else if (total >= 5) {
+        maxWidth = 900;
+        quality = 0.55;
+    }
+
+    const promises = Array.from(files).map(file => compressImageHD(file, maxWidth, quality));
     return await Promise.all(promises);
 }
 
@@ -176,34 +181,33 @@ async function handleFormSubmit(e) {
             images = await processSelectedImages(imageInput.files);
         }
 
-        if (carId) {
-            const existingCar = cars.find(c => c.id === carId);
-            const updatedData = {
-                title,
-                brand,
-                type,
-                year,
-                km,
-                price,
-                images: images.length > 0 ? images : (existingCar ? existingCar.images : [])
-            };
+        const carData = {
+            title,
+            brand,
+            type,
+            year,
+            km,
+            price,
+            images: images.length > 0 ? images : (carId ? (cars.find(c => c.id === carId)?.images || []) : ["https://via.placeholder.com/600x400?text=Sem+Foto"]),
+            updatedAt: new Date().toISOString()
+        };
 
+        // Validação de segurança: verifica o tamanho final em bytes antes de enviar
+        const jsonSize = new Blob([JSON.stringify(carData)]).size;
+        if (jsonSize > 1000000) { // 1 MB limit
+            alert("Aviso: O conjunto total de fotos ainda ultrapassou 1 MB. Reduza 1 foto ou envie ficheiros ligeiramente menores.");
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
+        if (carId) {
             const vehicleRef = doc(db, "veiculos", carId);
-            await updateDoc(vehicleRef, updatedData);
+            await updateDoc(vehicleRef, carData);
             alert('Veículo atualizado com sucesso na nuvem!');
         } else {
-            const newCarData = {
-                title,
-                brand,
-                type,
-                year,
-                km,
-                price,
-                images: images.length > 0 ? images : ["https://via.placeholder.com/600x400?text=Sem+Foto"],
-                createdAt: new Date().toISOString()
-            };
-
-            await addDoc(vehiclesCollection, newCarData);
+            carData.createdAt = new Date().toISOString();
+            await addDoc(vehiclesCollection, carData);
             alert('Novo veículo cadastrado na nuvem com sucesso!');
         }
 
@@ -217,7 +221,6 @@ async function handleFormSubmit(e) {
     }
 }
 
-// Renderizar o Catálogo na Tela
 function renderCars() {
     const searchTerm = searchInput.value.toLowerCase();
     const selectedBrand = brandFilter.value;
@@ -306,7 +309,6 @@ function createCarCard(car) {
     return card;
 }
 
-// Funções do Carrossel do Card
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
@@ -324,9 +326,7 @@ window.moveSlide = function(event, direction) {
     if (dots.length) dots[activeIndex].classList.add('active');
 };
 
-// ==========================================================================
-// MODAL LIGHTBOX COM NAVEGAÇÃO DE FOTOS NO ZOOM
-// ==========================================================================
+// Lightbox com suporte a Touch (Swipe)
 window.openImageModal = function(carId, imageIndex) {
     const car = cars.find(c => c.id === carId);
     if (!car || !car.images || car.images.length === 0) return;
@@ -341,9 +341,7 @@ window.openImageModal = function(carId, imageIndex) {
         modal.className = 'image-modal';
         modal.innerHTML = `
             <span class="close-modal" onclick="closeImageModal()">&times;</span>
-            <button type="button" class="modal-nav prev" onclick="navigateModalImage(-1)"><i class="fas fa-chevron-left"></i></button>
             <img class="modal-content" id="img-modal-target" src="" alt="Foto Ampliada">
-            <button type="button" class="modal-nav next" onclick="navigateModalImage(1)"><i class="fas fa-chevron-right"></i></button>
             <div class="modal-counter" id="modal-counter"></div>
         `;
         document.body.appendChild(modal);
@@ -351,17 +349,37 @@ window.openImageModal = function(carId, imageIndex) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeImageModal();
         });
+
+        modal.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        modal.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleModalSwipe();
+        }, { passive: true });
     }
 
     updateModalImage();
     modal.classList.add('show');
 };
 
+function handleModalSwipe() {
+    const swipeDistance = touchEndX - touchStartX;
+    const minSwipeDistance = 40;
+
+    if (Math.abs(swipeDistance) > minSwipeDistance) {
+        if (swipeDistance < 0) {
+            navigateModalImage(1);
+        } else {
+            navigateModalImage(-1);
+        }
+    }
+}
+
 function updateModalImage() {
     const targetImg = document.getElementById('img-modal-target');
     const counter = document.getElementById('modal-counter');
-    const prevBtn = document.querySelector('.modal-nav.prev');
-    const nextBtn = document.querySelector('.modal-nav.next');
 
     if (targetImg) {
         targetImg.src = currentModalImages[currentModalIndex];
@@ -369,15 +387,6 @@ function updateModalImage() {
 
     if (counter) {
         counter.textContent = `${currentModalIndex + 1} / ${currentModalImages.length}`;
-    }
-
-    // Se só tiver 1 imagem, esconde as setas de navegação no zoom
-    if (currentModalImages.length <= 1) {
-        if (prevBtn) prevBtn.style.display = 'none';
-        if (nextBtn) nextBtn.style.display = 'none';
-    } else {
-        if (prevBtn) prevBtn.style.display = 'flex';
-        if (nextBtn) nextBtn.style.display = 'flex';
     }
 }
 
