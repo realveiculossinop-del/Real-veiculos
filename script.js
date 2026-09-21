@@ -1,67 +1,37 @@
 // ==========================================================================
+// IMPORTAÇÃO E CONFIGURAÇÃO DO FIREBASE (NUVEM)
+// ==========================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    updateDoc, 
+    deleteDoc, 
+    doc, 
+    onSnapshot 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Configurações do seu projeto Firebase Real Veículos
+const firebaseConfig = {
+    apiKey: "AIzaSyB9qJkpKr3ch5BCL4xwQcvfwLpbX31w5tI",
+    authDomain: "real-veiculos-7ddb9.firebaseapp.com",
+    projectId: "real-veiculos-7ddb9",
+    storageBucket: "real-veiculos-7ddb9.firebasestorage.app",
+    messagingSenderId: "106904646145",
+    appId: "1:106904646145:web:54bec9863b53538cbb0600"
+};
+
+// Inicialização do Firebase & Firestore
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const vehiclesCollection = collection(db, "veiculos");
+
+// ==========================================================================
 // CONFIGURAÇÕES DE AUTENTICAÇÃO
 // ==========================================================================
-const ADMIN_PASSWORD = "real123"; // Defina aqui a sua palavra-passe de admin
+const ADMIN_PASSWORD = "real123"; // Palavra-passe de administrador
 let isAdminLoggedIn = false;
-
-// ==========================================================================
-// BASE DE DADOS (INDEXEDDB)
-// ==========================================================================
-const DB_NAME = 'RealVeiculosDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'veiculos';
-
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-            }
-        };
-
-        request.onsuccess = (e) => resolve(e.target.result);
-        request.onerror = (e) => reject(e.target.error);
-    });
-}
-
-async function getAllCarsFromDB() {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function saveCarToDB(car) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.put(car);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function deleteCarFromDB(id) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.delete(id);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
-}
 
 // ==========================================================================
 // DADOS E VARIÁVEIS DE ESTADO
@@ -82,29 +52,21 @@ const searchInput = document.getElementById('search-input');
 const brandFilter = document.getElementById('brand-filter');
 const bodyFilter = document.getElementById('body-filter');
 
-// Inicialização da Aplicação
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        cars = await getAllCarsFromDB();
-        
-        if (cars.length === 0) {
-            const initialCar = {
-                id: "1",
-                title: "HONDA CR-V EXL 2.0 FLEX",
-                brand: "Honda",
-                type: "SUV",
-                year: "2012 / 2012",
-                km: "141.000 km",
-                price: "65.900",
-                images: ["https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80"]
-            };
-            await saveCarToDB(initialCar);
-            cars = [initialCar];
-        }
+// ==========================================================================
+// SINCRONIZAÇÃO EM TEMPO REAL (FIRESTORE)
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Escuta em tempo real: qualquer alteração no banco atualiza o site instantaneamente
+    onSnapshot(vehiclesCollection, (snapshot) => {
+        cars = snapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+        }));
+
         renderCars();
-    } catch (err) {
-        console.error("Erro ao carregar veículos:", err);
-    }
+    }, (error) => {
+        console.error("Erro ao sincronizar com o Firebase:", error);
+    });
 
     setupEventListeners();
 });
@@ -118,17 +80,16 @@ function setupEventListeners() {
                 isAdminLoggedIn = true;
                 adminToggleBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair do Admin';
                 adminSection.classList.remove('hidden');
-                renderCars(); // Re-renderiza para mostrar botões de edição
+                renderCars();
             } else if (passwordInput !== null) {
                 alert("Palavra-passe incorreta!");
             }
         } else {
-            // Fazer Logoff
             isAdminLoggedIn = false;
             adminToggleBtn.innerHTML = '<i class="fas fa-lock"></i> Entrar como Admin';
             adminSection.classList.add('hidden');
             resetForm();
-            renderCars(); // Re-renderiza para esconder botões de edição
+            renderCars();
         }
     });
 
@@ -145,8 +106,8 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Redimensionamento de Imagens
-function compressImage(file, maxWidth = 1024, quality = 0.8) {
+// Redimensionamento e Compactação de Imagens
+function compressImage(file, maxWidth = 1024, quality = 0.7) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -182,6 +143,7 @@ async function processSelectedImages(files) {
     return await Promise.all(promises);
 }
 
+// Submeter Formulário (Guardar no Firebase)
 async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -189,7 +151,7 @@ async function handleFormSubmit(e) {
 
     const submitBtn = carForm.querySelector('.btn-submit');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A guardar...';
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> A guardar na nuvem...';
     submitBtn.disabled = true;
 
     try {
@@ -208,55 +170,56 @@ async function handleFormSubmit(e) {
         }
 
         if (carId) {
-            const index = cars.findIndex(c => c.id === carId);
-            if (index !== -1) {
-                const updatedCar = {
-                    ...cars[index],
-                    title,
-                    brand,
-                    type,
-                    year,
-                    km,
-                    price,
-                    images: images.length > 0 ? images : cars[index].images
-                };
-                await saveCarToDB(updatedCar);
-                cars[index] = updatedCar;
-            }
-        } else {
-            const newCar = {
-                id: Date.now().toString(),
+            // Atualizar veículo existente na nuvem
+            const existingCar = cars.find(c => c.id === carId);
+            const updatedData = {
                 title,
                 brand,
                 type,
                 year,
                 km,
                 price,
-                images: images.length > 0 ? images : ["https://via.placeholder.com/600x400?text=Sem+Foto"]
+                images: images.length > 0 ? images : (existingCar ? existingCar.images : [])
             };
-            await saveCarToDB(newCar);
-            cars.unshift(newCar);
+
+            const vehicleRef = doc(db, "veiculos", carId);
+            await updateDoc(vehicleRef, updatedData);
+            alert('Veículo atualizado com sucesso na nuvem!');
+        } else {
+            // Criar novo veículo na nuvem
+            const newCarData = {
+                title,
+                brand,
+                type,
+                year,
+                km,
+                price,
+                images: images.length > 0 ? images : ["https://via.placeholder.com/600x400?text=Sem+Foto"],
+                createdAt: new Date().toISOString()
+            };
+
+            await addDoc(vehiclesCollection, newCarData);
+            alert('Novo veículo cadastrado na nuvem com sucesso!');
         }
 
-        renderCars();
         resetForm();
-        alert('Veículo guardado com sucesso!');
     } catch (error) {
-        console.error("Erro ao guardar no IndexedDB:", error);
-        alert('Ocorreu um erro ao guardar. Tente novamente.');
+        console.error("Erro ao guardar no Firebase:", error);
+        alert('Ocorreu um erro ao guardar no banco de dados da nuvem. Verifique a ligação ou as regras do Firebase.');
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 }
 
+// Renderizar o Catálogo na Tela
 function renderCars() {
     const searchTerm = searchInput.value.toLowerCase();
     const selectedBrand = brandFilter.value;
     const selectedBody = bodyFilter.value;
 
     const filteredCars = cars.filter(car => {
-        const matchesSearch = car.title.toLowerCase().includes(searchTerm) || car.brand.toLowerCase().includes(searchTerm);
+        const matchesSearch = (car.title || '').toLowerCase().includes(searchTerm) || (car.brand || '').toLowerCase().includes(searchTerm);
         const matchesBrand = selectedBrand === 'all' || car.brand === selectedBrand;
         const matchesBody = selectedBody === 'all' || car.type === selectedBody;
         return matchesSearch && matchesBrand && matchesBody;
@@ -265,7 +228,7 @@ function renderCars() {
     carGrid.innerHTML = '';
 
     if (filteredCars.length === 0) {
-        carGrid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #a1a1aa; padding: 40px;">Nenhum veículo encontrado.</p>`;
+        carGrid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #a1a1aa; padding: 40px;">Nenhum veículo encontrado no catálogo.</p>`;
         return;
     }
 
@@ -279,7 +242,7 @@ function createCarCard(car) {
     const card = document.createElement('div');
     card.className = 'car-card';
 
-    const imagesList = Array.isArray(car.images) && car.images.length > 0 ? car.images : [car.image || "https://via.placeholder.com/600x400?text=Sem+Foto"];
+    const imagesList = Array.isArray(car.images) && car.images.length > 0 ? car.images : ["https://via.placeholder.com/600x400?text=Sem+Foto"];
 
     let carouselHTML = '';
     if (imagesList.length > 1) {
@@ -309,7 +272,6 @@ function createCarCard(car) {
 
     const whatsappMessage = encodeURIComponent(`Olá! Tenho interesse no veículo ${car.title} (R$ ${car.price}). Poderia me dar mais informações?`);
 
-    // Exibe botões de Editar/Eliminar SOMENTE se o Admin estiver autenticado
     const adminButtonsHTML = isAdminLoggedIn ? `
         <div class="admin-card-actions">
             <button type="button" class="btn-edit" onclick="editCar('${car.id}')"><i class="fas fa-edit"></i> Editar</button>
@@ -318,7 +280,7 @@ function createCarCard(car) {
     ` : '';
 
     card.innerHTML = `
-        <span class="card-tag">${car.type}</span>
+        <span class="card-tag">${car.type || 'Veículo'}</span>
         ${carouselHTML}
         <div class="car-info">
             <h3 class="car-title">${car.title}</h3>
@@ -339,6 +301,7 @@ function createCarCard(car) {
     return card;
 }
 
+// Funções Globais (Para botões inline)
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
@@ -377,10 +340,14 @@ window.editCar = function(id) {
 
 window.deleteCar = async function(id) {
     if (!isAdminLoggedIn) return;
-    if (confirm('Tem certeza que deseja excluir este veículo?')) {
-        await deleteCarFromDB(id);
-        cars = cars.filter(c => c.id !== id);
-        renderCars();
+    if (confirm('Tem certeza que deseja excluir este veículo da nuvem?')) {
+        try {
+            await deleteDoc(doc(db, "veiculos", id));
+            alert('Veículo removido com sucesso!');
+        } catch (error) {
+            console.error("Erro ao apagar veículo:", error);
+            alert("Erro ao remover o veículo do Firebase.");
+        }
     }
 };
 
