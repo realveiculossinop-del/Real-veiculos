@@ -30,13 +30,15 @@ const vehiclesCollection = collection(db, "veiculos");
 // ==========================================================================
 // CONFIGURAÇÕES DE AUTENTICAÇÃO
 // ==========================================================================
-const ADMIN_PASSWORD = "real123"; // Palavra-passe de administrador
+const ADMIN_PASSWORD = "real123";
 let isAdminLoggedIn = false;
 
 // ==========================================================================
 // DADOS E VARIÁVEIS DE ESTADO
 // ==========================================================================
 let cars = [];
+let currentModalImages = [];
+let currentModalIndex = 0;
 
 // Elementos do DOM
 const carGrid = document.getElementById('car-grid');
@@ -104,7 +106,7 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Compressão otimizada com maior qualidade (1000px, 70% de qualidade JPEG)
+// Compressão otimizada com alta qualidade (1000px, 70% JPEG)
 function compressImage(file, maxWidth = 1000, quality = 0.7) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -253,7 +255,7 @@ function createCarCard(car) {
             <div class="car-carousel">
                 ${imagesList.map((img, idx) => `
                     <div class="carousel-slide ${idx === 0 ? 'active' : ''}">
-                        <img src="${img}" alt="${car.title}" onclick="openImageModal('${img}')" style="cursor: pointer;" title="Clique para ampliar">
+                        <img src="${img}" alt="${car.title}" onclick="openImageModal('${car.id}',${idx})" style="cursor: pointer;" title="Clique para ampliar">
                     </div>
                 `).join('')}
                 <button type="button" class="carousel-btn prev" onclick="moveSlide(event, -1)"><i class="fas fa-chevron-left"></i></button>
@@ -267,7 +269,7 @@ function createCarCard(car) {
         carouselHTML = `
             <div class="car-carousel">
                 <div class="carousel-slide active">
-                    <img src="${imagesList[0]}" alt="${car.title}" onclick="openImageModal('${imagesList[0]}')" style="cursor: pointer;" title="Clique para ampliar">
+                    <img src="${imagesList[0]}" alt="${car.title}" onclick="openImageModal('${car.id}', 0)" style="cursor: pointer;" title="Clique para ampliar">
                 </div>
             </div>
         `;
@@ -304,7 +306,7 @@ function createCarCard(car) {
     return card;
 }
 
-// Funções Globais (Navegação do Carrossel e Modal de Imagem)
+// Funções do Carrossel do Card
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
@@ -322,8 +324,16 @@ window.moveSlide = function(event, direction) {
     if (dots.length) dots[activeIndex].classList.add('active');
 };
 
-// Abrir Modal da Imagem em Ecrã Inteiro
-window.openImageModal = function(imageSrc) {
+// ==========================================================================
+// MODAL LIGHTBOX COM NAVEGAÇÃO DE FOTOS NO ZOOM
+// ==========================================================================
+window.openImageModal = function(carId, imageIndex) {
+    const car = cars.find(c => c.id === carId);
+    if (!car || !car.images || car.images.length === 0) return;
+
+    currentModalImages = car.images;
+    currentModalIndex = imageIndex;
+
     let modal = document.getElementById('image-modal');
     if (!modal) {
         modal = document.createElement('div');
@@ -331,7 +341,10 @@ window.openImageModal = function(imageSrc) {
         modal.className = 'image-modal';
         modal.innerHTML = `
             <span class="close-modal" onclick="closeImageModal()">&times;</span>
+            <button type="button" class="modal-nav prev" onclick="navigateModalImage(-1)"><i class="fas fa-chevron-left"></i></button>
             <img class="modal-content" id="img-modal-target" src="" alt="Foto Ampliada">
+            <button type="button" class="modal-nav next" onclick="navigateModalImage(1)"><i class="fas fa-chevron-right"></i></button>
+            <div class="modal-counter" id="modal-counter"></div>
         `;
         document.body.appendChild(modal);
 
@@ -340,11 +353,47 @@ window.openImageModal = function(imageSrc) {
         });
     }
 
-    document.getElementById('img-modal-target').src = imageSrc;
+    updateModalImage();
     modal.classList.add('show');
 };
 
-// Fechar Modal da Imagem
+function updateModalImage() {
+    const targetImg = document.getElementById('img-modal-target');
+    const counter = document.getElementById('modal-counter');
+    const prevBtn = document.querySelector('.modal-nav.prev');
+    const nextBtn = document.querySelector('.modal-nav.next');
+
+    if (targetImg) {
+        targetImg.src = currentModalImages[currentModalIndex];
+    }
+
+    if (counter) {
+        counter.textContent = `${currentModalIndex + 1} / ${currentModalImages.length}`;
+    }
+
+    // Se só tiver 1 imagem, esconde as setas de navegação no zoom
+    if (currentModalImages.length <= 1) {
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
+    } else {
+        if (prevBtn) prevBtn.style.display = 'flex';
+        if (nextBtn) nextBtn.style.display = 'flex';
+    }
+}
+
+window.navigateModalImage = function(direction) {
+    if (currentModalImages.length <= 1) return;
+
+    currentModalIndex += direction;
+    if (currentModalIndex < 0) {
+        currentModalIndex = currentModalImages.length - 1;
+    } else if (currentModalIndex >= currentModalImages.length) {
+        currentModalIndex = 0;
+    }
+
+    updateModalImage();
+};
+
 window.closeImageModal = function() {
     const modal = document.getElementById('image-modal');
     if (modal) {
