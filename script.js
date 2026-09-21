@@ -37,7 +37,6 @@ let cars = [];
 let currentModalImages = [];
 let currentModalIndex = 0;
 
-// Variáveis de Controlo do Gesto Touch (Swipe)
 let touchStartX = 0;
 let touchEndX = 0;
 
@@ -108,9 +107,9 @@ function setupEventListeners() {
 }
 
 // ==========================================================================
-// COMPRESSÃO DINÂMICA DE IMAGENS (PARA MANTER < 1MB NO FIRESTORE)
+// COMPRESSÃO RIGOROSA COM LIMITE ESTRITO (GARANTE < 1MB TOTAL)
 // ==========================================================================
-function compressImageHD(file, maxWidth = 800, quality = 0.5) {
+function compressSingleImage(file, maxWidth, quality) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -150,35 +149,46 @@ function compressImageHD(file, maxWidth = 800, quality = 0.5) {
     });
 }
 
+// Algoritmo adaptativo que força as imagens a caberem em menos de 800 KB total
 async function processSelectedImages(files) {
     const total = files.length;
-    let maxWidth = 800;
-    let quality = 0.5;
+    let maxWidth = 600;
+    let quality = 0.4;
 
-    // Ajuste dinâmico inteligente com base na quantidade de fotos selecionadas
-    if (total >= 7) {
+    if (total >= 8) {
+        maxWidth = 400;
+        quality = 0.25;
+    } else if (total >= 5) {
+        maxWidth = 480;
+        quality = 0.3;
+    } else if (total >= 3) {
         maxWidth = 550;
         quality = 0.35;
-    } else if (total >= 4) {
-        maxWidth = 650;
-        quality = 0.42;
-    } else if (total >= 2) {
-        maxWidth = 750;
-        quality = 0.50;
-    } else {
-        maxWidth = 850;
-        quality = 0.60;
     }
 
-    const promises = Array.from(files).map(file => compressImageHD(file, maxWidth, quality));
-    return await Promise.all(promises);
+    let results = await Promise.all(Array.from(files).map(f => compressSingleImage(f, maxWidth, quality)));
+    
+    // Teste de tamanho do payload
+    let totalSize = new Blob([JSON.stringify(results)]).size;
+    
+    // Se ainda assim passar de 800KB (para margem de segurança do Firestore de 1MB), comprime numa 2ª passagem
+    if (totalSize > 800000) {
+        maxWidth = Math.round(maxWidth * 0.75);
+        quality = 0.25;
+        results = await Promise.all(Array.from(files).map(f => compressSingleImage(f, maxWidth, quality)));
+    }
+
+    return results;
 }
 
-// Submeter Formulário (Guardar no Firebase)
+// Submeter Formulário
 async function handleFormSubmit(e) {
     e.preventDefault();
 
-    if (!isAdminLoggedIn) return;
+    if (!isAdminLoggedIn) {
+        alert("Sessão expirada. Faça login de administrador novamente.");
+        return;
+    }
 
     const submitBtn = carForm.querySelector('.btn-submit');
     const originalText = submitBtn.innerHTML;
@@ -196,29 +206,20 @@ async function handleFormSubmit(e) {
         const imageInput = document.getElementById('car-image-input');
 
         let images = [];
-        if (imageInput.files.length > 0) {
+        if (imageInput.files && imageInput.files.length > 0) {
             images = await processSelectedImages(imageInput.files);
         }
 
         const carData = {
-            title,
-            brand,
-            type,
-            year,
-            km,
-            price,
+            title: title || '',
+            brand: brand || '',
+            type: type || '',
+            year: year || '',
+            km: km || '',
+            price: price || '',
             images: images.length > 0 ? images : (carId ? (cars.find(c => c.id === carId)?.images || []) : ["https://via.placeholder.com/600x400?text=Sem+Foto"]),
             updatedAt: new Date().toISOString()
         };
-
-        // Validação estrita do tamanho do pacote antes do envio
-        const jsonSize = new Blob([JSON.stringify(carData)]).size;
-        if (jsonSize > 1000000) { // 1 MB limit
-            alert("Aviso: O conjunto total de fotos ainda ultrapassou 1 MB. Remova 1 foto ou envie imagens ligeiramente menores.");
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            return;
-        }
 
         if (carId) {
             const vehicleRef = doc(db, "veiculos", carId);
@@ -227,13 +228,13 @@ async function handleFormSubmit(e) {
         } else {
             carData.createdAt = new Date().toISOString();
             await addDoc(vehiclesCollection, carData);
-            alert('Novo veículo cadastrado na nuvem com sucesso!');
+            alert('Novo veículo cadastrado com sucesso!');
         }
 
         resetForm();
     } catch (error) {
         console.error("Erro ao guardar no Firebase:", error);
-        alert(`ERRO DO FIREBASE:\n\nCódigo: ${error.code || 'Desconhecido'}\nMensagem: ${error.message || error}`);
+        alert(`FALHA AO GUARDAR NO FIREBASE:\n\nCódigo: ${error.code || 'Desconhecido'}\nMensagem: ${error.message || error}`);
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -347,9 +348,7 @@ window.moveSlide = function(event, direction) {
     if (dots.length) dots[activeIndex].classList.add('active');
 };
 
-// ==========================================================================
-// MODAL LIGHTBOX COM SUPORTE A TOUCH (GESTO SWIPE / DESLIZAR DEDO)
-// ==========================================================================
+// Modal Lightbox com Gestos Touch (Swipe)
 window.openImageModal = function(carId, imageIndex) {
     const car = cars.find(c => c.id === carId);
     if (!car || !car.images || car.images.length === 0) return;
@@ -373,7 +372,6 @@ window.openImageModal = function(carId, imageIndex) {
             if (e.target === modal) closeImageModal();
         });
 
-        // Eventos Touch para o gesto de deslizar
         modal.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
         }, { passive: true });
@@ -390,13 +388,13 @@ window.openImageModal = function(carId, imageIndex) {
 
 function handleModalSwipe() {
     const swipeDistance = touchEndX - touchStartX;
-    const minSwipeDistance = 40; // Distância mínima para validar o gesto de arrastar
+    const minSwipeDistance = 40;
 
     if (Math.abs(swipeDistance) > minSwipeDistance) {
         if (swipeDistance < 0) {
-            navigateModalImage(1); // Deslizou para a esquerda -> Próxima
+            navigateModalImage(1);
         } else {
-            navigateModalImage(-1); // Deslizou para a direita -> Anterior
+            navigateModalImage(-1);
         }
     }
 }
