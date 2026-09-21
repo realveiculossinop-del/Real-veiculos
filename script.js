@@ -1,5 +1,5 @@
 // ==========================================================================
-// IMPORTAÇÃO E CONFIGURAÇÃO DO FIREBASE (NUVEM)
+// IMPORTAÇÃO E CONFIGURAÇÃO DO FIREBASE (NUVEM - PLANO GRATUITO)
 // ==========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
@@ -30,7 +30,7 @@ const vehiclesCollection = collection(db, "veiculos");
 // ==========================================================================
 // CONFIGURAÇÕES DE AUTENTICAÇÃO
 // ==========================================================================
-const ADMIN_PASSWORD = "real123"; // Palavra-passe de administrador
+const ADMIN_PASSWORD = "real123";
 let isAdminLoggedIn = false;
 
 // ==========================================================================
@@ -56,7 +56,6 @@ const bodyFilter = document.getElementById('body-filter');
 // SINCRONIZAÇÃO EM TEMPO REAL (FIRESTORE)
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Escuta em tempo real: qualquer alteração no banco atualiza o site instantaneamente
     onSnapshot(vehiclesCollection, (snapshot) => {
         cars = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
@@ -72,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    // Gestão de Sessão do Admin
     adminToggleBtn.addEventListener('click', () => {
         if (!isAdminLoggedIn) {
             const passwordInput = prompt("Digite a palavra-passe de administrador:");
@@ -106,8 +104,8 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Redimensionamento e Compactação Alta de Imagens (Gera arquivos leves ~80-150KB)
-function compressImage(file, maxWidth = 800, quality = 0.5) {
+// Compressão ultra-leve para permitir múltiplas fotos no limite de 1 MB
+function compressImage(file, maxWidth = 600, quality = 0.4) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -137,7 +135,7 @@ function compressImage(file, maxWidth = 800, quality = 0.5) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Força exportação em formato JPEG leve
+                // Exporta em JPEG otimizado (~25KB por foto)
                 resolve(canvas.toDataURL('image/jpeg', quality));
             };
             img.onerror = (err) => reject(err);
@@ -151,7 +149,7 @@ async function processSelectedImages(files) {
     return await Promise.all(promises);
 }
 
-// Submeter Formulário (Guardar no Firebase)
+// Submeter Formulário
 async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -169,11 +167,7 @@ async function handleFormSubmit(e) {
         const type = document.getElementById('car-type-input').value;
         const year = document.getElementById('car-year-input').value;
         const km = document.getElementById('car-km-input').value;
-        const rawPrice = document.getElementById('car-price-input').value;
-        
-        // Formata o preço limpando zeros ou pontuações extras incorretas
-        const price = rawPrice.trim();
-
+        const price = document.getElementById('car-price-input').value;
         const imageInput = document.getElementById('car-image-input');
 
         let images = [];
@@ -182,7 +176,6 @@ async function handleFormSubmit(e) {
         }
 
         if (carId) {
-            // Atualizar veículo existente na nuvem
             const existingCar = cars.find(c => c.id === carId);
             const updatedData = {
                 title,
@@ -198,7 +191,6 @@ async function handleFormSubmit(e) {
             await updateDoc(vehicleRef, updatedData);
             alert('Veículo atualizado com sucesso na nuvem!');
         } else {
-            // Criar novo veículo na nuvem
             const newCarData = {
                 title,
                 brand,
@@ -211,7 +203,7 @@ async function handleFormSubmit(e) {
             };
 
             await addDoc(vehiclesCollection, newCarData);
-            alert('Novo veículo cadastrado na nuvem com sucesso!');
+            alert('Novo veículo cadastrado com sucesso!');
         }
 
         resetForm();
@@ -313,7 +305,7 @@ function createCarCard(car) {
     return card;
 }
 
-// Funções Globais (Para botões inline)
+// Funções Globais
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
