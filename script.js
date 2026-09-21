@@ -12,6 +12,7 @@ import {
     onSnapshot 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Configurações do seu projeto Firebase Real Veículos
 const firebaseConfig = {
     apiKey: "AIzaSyB9qJkpKr3ch5BCL4xwQcvfwLpbX31w5tI",
     authDomain: "real-veiculos-7ddb9.firebaseapp.com",
@@ -21,10 +22,14 @@ const firebaseConfig = {
     appId: "1:106904646145:web:54bec9863b53538cbb0600"
 };
 
+// Inicialização do Firebase & Firestore
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const vehiclesCollection = collection(db, "veiculos");
 
+// ==========================================================================
+// CONFIGURAÇÕES DE AUTENTICAÇÃO E ESTADO
+// ==========================================================================
 const ADMIN_PASSWORD = "real123";
 let isAdminLoggedIn = false;
 
@@ -32,9 +37,11 @@ let cars = [];
 let currentModalImages = [];
 let currentModalIndex = 0;
 
+// Variáveis de Controlo do Gesto Touch (Swipe)
 let touchStartX = 0;
 let touchEndX = 0;
 
+// Elementos do DOM
 const carGrid = document.getElementById('car-grid');
 const adminSection = document.getElementById('admin-section');
 const adminToggleBtn = document.getElementById('admin-toggle-btn');
@@ -43,16 +50,21 @@ const carForm = document.getElementById('car-form');
 const formTitle = document.getElementById('form-title');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
 
+// Elementos de Filtro
 const searchInput = document.getElementById('search-input');
 const brandFilter = document.getElementById('brand-filter');
 const bodyFilter = document.getElementById('body-filter');
 
+// ==========================================================================
+// SINCRONIZAÇÃO EM TEMPO REAL (FIRESTORE)
+// ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     onSnapshot(vehiclesCollection, (snapshot) => {
         cars = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data()
         }));
+
         renderCars();
     }, (error) => {
         console.error("Erro ao sincronizar com o Firebase:", error);
@@ -95,8 +107,10 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Compressão de Alta Qualidade e Remoção de Metadados
-function compressImageHD(file, maxWidth = 1000, quality = 0.65) {
+// ==========================================================================
+// COMPRESSÃO DINÂMICA DE IMAGENS (PARA MANTER < 1MB NO FIRESTORE)
+// ==========================================================================
+function compressImageHD(file, maxWidth = 800, quality = 0.5) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -124,7 +138,6 @@ function compressImageHD(file, maxWidth = 1000, quality = 0.65) {
                 canvas.height = height;
 
                 const ctx = canvas.getContext('2d');
-                // Aplica suavização na reescalagem
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, width, height);
@@ -139,23 +152,29 @@ function compressImageHD(file, maxWidth = 1000, quality = 0.65) {
 
 async function processSelectedImages(files) {
     const total = files.length;
-    // Ajuste proporcional automático para manter o lote de fotos sempre < 900KB
-    let maxWidth = 1000;
-    let quality = 0.65;
+    let maxWidth = 800;
+    let quality = 0.5;
 
-    if (total >= 8) {
-        maxWidth = 800;
-        quality = 0.45;
-    } else if (total >= 5) {
-        maxWidth = 900;
-        quality = 0.55;
+    // Ajuste dinâmico inteligente com base na quantidade de fotos selecionadas
+    if (total >= 7) {
+        maxWidth = 550;
+        quality = 0.35;
+    } else if (total >= 4) {
+        maxWidth = 650;
+        quality = 0.42;
+    } else if (total >= 2) {
+        maxWidth = 750;
+        quality = 0.50;
+    } else {
+        maxWidth = 850;
+        quality = 0.60;
     }
 
     const promises = Array.from(files).map(file => compressImageHD(file, maxWidth, quality));
     return await Promise.all(promises);
 }
 
-// Submeter Formulário
+// Submeter Formulário (Guardar no Firebase)
 async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -192,10 +211,10 @@ async function handleFormSubmit(e) {
             updatedAt: new Date().toISOString()
         };
 
-        // Validação de segurança: verifica o tamanho final em bytes antes de enviar
+        // Validação estrita do tamanho do pacote antes do envio
         const jsonSize = new Blob([JSON.stringify(carData)]).size;
         if (jsonSize > 1000000) { // 1 MB limit
-            alert("Aviso: O conjunto total de fotos ainda ultrapassou 1 MB. Reduza 1 foto ou envie ficheiros ligeiramente menores.");
+            alert("Aviso: O conjunto total de fotos ainda ultrapassou 1 MB. Remova 1 foto ou envie imagens ligeiramente menores.");
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             return;
@@ -221,6 +240,7 @@ async function handleFormSubmit(e) {
     }
 }
 
+// Renderizar o Catálogo no Ecrã
 function renderCars() {
     const searchTerm = searchInput.value.toLowerCase();
     const selectedBrand = brandFilter.value;
@@ -309,6 +329,7 @@ function createCarCard(car) {
     return card;
 }
 
+// Funções do Carrossel dos Cartões
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
@@ -326,7 +347,9 @@ window.moveSlide = function(event, direction) {
     if (dots.length) dots[activeIndex].classList.add('active');
 };
 
-// Lightbox com suporte a Touch (Swipe)
+// ==========================================================================
+// MODAL LIGHTBOX COM SUPORTE A TOUCH (GESTO SWIPE / DESLIZAR DEDO)
+// ==========================================================================
 window.openImageModal = function(carId, imageIndex) {
     const car = cars.find(c => c.id === carId);
     if (!car || !car.images || car.images.length === 0) return;
@@ -350,6 +373,7 @@ window.openImageModal = function(carId, imageIndex) {
             if (e.target === modal) closeImageModal();
         });
 
+        // Eventos Touch para o gesto de deslizar
         modal.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
         }, { passive: true });
@@ -366,13 +390,13 @@ window.openImageModal = function(carId, imageIndex) {
 
 function handleModalSwipe() {
     const swipeDistance = touchEndX - touchStartX;
-    const minSwipeDistance = 40;
+    const minSwipeDistance = 40; // Distância mínima para validar o gesto de arrastar
 
     if (Math.abs(swipeDistance) > minSwipeDistance) {
         if (swipeDistance < 0) {
-            navigateModalImage(1);
+            navigateModalImage(1); // Deslizou para a esquerda -> Próxima
         } else {
-            navigateModalImage(-1);
+            navigateModalImage(-1); // Deslizou para a direita -> Anterior
         }
     }
 }
