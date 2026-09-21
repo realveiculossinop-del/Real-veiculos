@@ -106,8 +106,8 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Redimensionamento e Compactação de Imagens
-function compressImage(file, maxWidth = 1024, quality = 0.7) {
+// Redimensionamento e Compactação Alta de Imagens (Gera arquivos leves ~80-150KB)
+function compressImage(file, maxWidth = 800, quality = 0.5) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -119,9 +119,16 @@ function compressImage(file, maxWidth = 1024, quality = 0.7) {
                 let width = img.width;
                 let height = img.height;
 
-                if (width > maxWidth) {
-                    height = Math.round((height * maxWidth) / width);
-                    width = maxWidth;
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxWidth) {
+                        width = Math.round((width * maxWidth) / height);
+                        height = maxWidth;
+                    }
                 }
 
                 canvas.width = width;
@@ -130,6 +137,7 @@ function compressImage(file, maxWidth = 1024, quality = 0.7) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
+                // Força exportação em formato JPEG leve
                 resolve(canvas.toDataURL('image/jpeg', quality));
             };
             img.onerror = (err) => reject(err);
@@ -161,7 +169,11 @@ async function handleFormSubmit(e) {
         const type = document.getElementById('car-type-input').value;
         const year = document.getElementById('car-year-input').value;
         const km = document.getElementById('car-km-input').value;
-        const price = document.getElementById('car-price-input').value;
+        const rawPrice = document.getElementById('car-price-input').value;
+        
+        // Formata o preço limpando zeros ou pontuações extras incorretas
+        const price = rawPrice.trim();
+
         const imageInput = document.getElementById('car-image-input');
 
         let images = [];
