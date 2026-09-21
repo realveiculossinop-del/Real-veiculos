@@ -56,7 +56,6 @@ const bodyFilter = document.getElementById('body-filter');
 // SINCRONIZAÇÃO EM TEMPO REAL (FIRESTORE)
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Escuta em tempo real: qualquer alteração no banco atualiza o site instantaneamente
     onSnapshot(vehiclesCollection, (snapshot) => {
         cars = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
@@ -72,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    // Gestão de Sessão do Admin
     adminToggleBtn.addEventListener('click', () => {
         if (!isAdminLoggedIn) {
             const passwordInput = prompt("Digite a palavra-passe de administrador:");
@@ -106,8 +104,8 @@ function setupEventListeners() {
     bodyFilter.addEventListener('change', renderCars);
 }
 
-// Compressão leve para manter documentos dentro do limite do plano gratuito (~25KB/foto)
-function compressImage(file, maxWidth = 600, quality = 0.4) {
+// Compressão otimizada com maior qualidade (1000px, 70% de qualidade JPEG)
+function compressImage(file, maxWidth = 1000, quality = 0.7) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -150,7 +148,7 @@ async function processSelectedImages(files) {
     return await Promise.all(promises);
 }
 
-// Submeter Formulário (Guardar no Firebase)
+// Submeter Formulário
 async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -177,7 +175,6 @@ async function handleFormSubmit(e) {
         }
 
         if (carId) {
-            // Atualizar veículo existente na nuvem
             const existingCar = cars.find(c => c.id === carId);
             const updatedData = {
                 title,
@@ -193,7 +190,6 @@ async function handleFormSubmit(e) {
             await updateDoc(vehicleRef, updatedData);
             alert('Veículo atualizado com sucesso na nuvem!');
         } else {
-            // Criar novo veículo na nuvem
             const newCarData = {
                 title,
                 brand,
@@ -212,7 +208,6 @@ async function handleFormSubmit(e) {
         resetForm();
     } catch (error) {
         console.error("Erro ao guardar no Firebase:", error);
-        // Exibe o erro técnico exato retornado pelo Firebase para facilitar a depuração
         alert(`ERRO DO FIREBASE:\n\nCódigo: ${error.code || 'Desconhecido'}\nMensagem: ${error.message || error}`);
     } finally {
         submitBtn.innerHTML = originalText;
@@ -258,7 +253,7 @@ function createCarCard(car) {
             <div class="car-carousel">
                 ${imagesList.map((img, idx) => `
                     <div class="carousel-slide ${idx === 0 ? 'active' : ''}">
-                        <img src="${img}" alt="${car.title}">
+                        <img src="${img}" alt="${car.title}" onclick="openImageModal('${img}')" style="cursor: pointer;" title="Clique para ampliar">
                     </div>
                 `).join('')}
                 <button type="button" class="carousel-btn prev" onclick="moveSlide(event, -1)"><i class="fas fa-chevron-left"></i></button>
@@ -272,7 +267,7 @@ function createCarCard(car) {
         carouselHTML = `
             <div class="car-carousel">
                 <div class="carousel-slide active">
-                    <img src="${imagesList[0]}" alt="${car.title}">
+                    <img src="${imagesList[0]}" alt="${car.title}" onclick="openImageModal('${imagesList[0]}')" style="cursor: pointer;" title="Clique para ampliar">
                 </div>
             </div>
         `;
@@ -309,7 +304,7 @@ function createCarCard(car) {
     return card;
 }
 
-// Funções Globais (Para botões inline)
+// Funções Globais (Navegação do Carrossel e Modal de Imagem)
 window.moveSlide = function(event, direction) {
     const card = event.target.closest('.car-card');
     const slides = card.querySelectorAll('.carousel-slide');
@@ -325,6 +320,36 @@ window.moveSlide = function(event, direction) {
 
     slides[activeIndex].classList.add('active');
     if (dots.length) dots[activeIndex].classList.add('active');
+};
+
+// Abrir Modal da Imagem em Ecrã Inteiro
+window.openImageModal = function(imageSrc) {
+    let modal = document.getElementById('image-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'image-modal';
+        modal.className = 'image-modal';
+        modal.innerHTML = `
+            <span class="close-modal" onclick="closeImageModal()">&times;</span>
+            <img class="modal-content" id="img-modal-target" src="" alt="Foto Ampliada">
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeImageModal();
+        });
+    }
+
+    document.getElementById('img-modal-target').src = imageSrc;
+    modal.classList.add('show');
+};
+
+// Fechar Modal da Imagem
+window.closeImageModal = function() {
+    const modal = document.getElementById('image-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
 };
 
 window.editCar = function(id) {
